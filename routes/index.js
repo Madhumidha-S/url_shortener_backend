@@ -7,6 +7,6 @@ router.get("/health", (req, res) => {
   res.status(200).json({ status: "ok", timestamp: new Date().toISOString() });
 });
 
-router.use("/url", urlRoutes);
+router.use("/api", urlRoutes);
 
 module.exports = router;
