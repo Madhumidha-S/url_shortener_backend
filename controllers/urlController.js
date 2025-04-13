@@ -1,4 +1,5 @@
 require("dotenv").config();
+const logger = require("../utils/logger");
 const db = require("../utils/database");
 
 let num = 10000000000000;
@@ -17,13 +18,13 @@ exports.generateURL = async (req, res, next) => {
     return encoded || "0";
   }
 
-  function decode(str) {
-    let decoded = 0;
-    for (let i = 0; i < str.length; i++) {
-      decoded = decoded * base + characters.indexOf(str[i]);
-    }
-    return decoded;
-  }
+  // function decode(str) {
+  //   let decoded = 0;
+  //   for (let i = 0; i < str.length; i++) {
+  //     decoded = decoded * base + characters.indexOf(str[i]);
+  //   }
+  //   return decoded;
+  // }
 
   try {
     const { longURL } = req.body;
@@ -35,7 +36,7 @@ exports.generateURL = async (req, res, next) => {
     num = num + 1;
     const shortID = encode(num);
     const shortenedURL = `${process.env.BASE_URL}/${shortID}`;
-    console.log(
+    logger.info(
       `Generated Short ID: ${shortID} for Value ${num} and ShortURL: ${shortenedURL}, LongURL: ${longURL}`
     );
     const query = `
@@ -48,7 +49,6 @@ exports.generateURL = async (req, res, next) => {
       longURL,
       shortenedURL,
       shortID,
-      num,
     });
   } catch (error) {
     next(error);

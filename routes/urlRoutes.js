@@ -4,5 +4,5 @@ const urlController = require("../controllers/urlController.js");
 const fs = require("fs");
 
 router.post("/shorturl", urlController.generateURL);
-router.delete("/:id", urlController.deleteURL);
+router.delete("/delete/:id", urlController.deleteURL);
 module.exports = router;
