@@ -58,16 +58,25 @@ exports.generateURL = async (req, res, next) => {
 
 exports.deleteURL = async (req, res, next) => {
   try {
-    const { id } = req.params;
-    if (!id) return res.status(400).json({ error: "ID Parameter is required" });
-    const result = await db.query(`SELECT * FROM urls WHERE id = $1`, [id]);
+    const { delete_id } = req.params;
+    if (!delete_id)
+      return res.status(400).json({ error: "ID Parameter is required" });
+    const result = await db.query(`SELECT * FROM urls WHERE short_id = $1`, [
+      delete_id,
+    ]);
     if (result.rows.length === 0) {
       return res.status(400).json({ error: "URL not found" });
     }
-    await db.query(`DELETE FROM urls WHERE id = $1`, [id]);
-    res
-      .status(200)
-      .json({ message: "URL deleted successfully", deleted: result.rows[0] });
+    await db.query(`DELETE FROM urls WHERE short_id = $1`, [delete_id]);
+    const { id, short_id, long_url } = result.rows[0];
+    res.status(200).json({
+      message: "URL deleted successfully",
+      deleted: {
+        id,
+        short_id,
+        long_url,
+      },
+    });
   } catch (error) {
     next(error);
     res.status(500).json({ error: "Failed to delete URL" });
