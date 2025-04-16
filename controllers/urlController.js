@@ -2,8 +2,6 @@ require("dotenv").config();
 const logger = require("../utils/logger");
 const db = require("../utils/database");
 
-let num = 10000000000000;
-
 exports.generateURL = async (req, res, next) => {
   const characters =
     "0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ";
@@ -33,17 +31,24 @@ exports.generateURL = async (req, res, next) => {
         .status(400)
         .json({ error: "longURL is required in the request body" });
     }
+    const result = await db.query(`SELECT num_value FROM url_counter`);
+    let num = Number(result.rows[0]?.num_value);
+
     num = num + 1;
     const shortID = encode(num);
     const shortenedURL = `${process.env.BASE_URL}/${shortID}`;
     logger.info(
-      `Generated Short ID: ${shortID} for Value ${num} and ShortURL: ${shortenedURL}, LongURL: ${longURL}`
+      `Generated Short ID: ${shortID}, ShortURL: ${shortenedURL}, LongURL: ${longURL}`
     );
-    const query = `
-      INSERT INTO urls (short_id, long_url, created_at)
-      VALUES ($1, $2, $3)
-    `;
-    await db.query(query, [shortID, longURL, new Date()]);
+    await db.query(
+      `INSERT INTO urls (short_id, long_url, created_at) VALUES ($1, $2, $3)`,
+      [shortID, longURL, new Date()]
+    );
+
+    await db.query(`UPDATE url_counter SET num_value = $1, updated_at = $2`, [
+      num,
+      new Date(),
+    ]);
 
     res.status(200).json({
       longURL,
@@ -67,6 +72,7 @@ exports.deleteURL = async (req, res, next) => {
     if (result.rows.length === 0) {
       return res.status(400).json({ error: "URL not found" });
     }
+    logger.info(`Deleted Short ID: ${delete_id}`);
     await db.query(`DELETE FROM urls WHERE short_id = $1`, [delete_id]);
     const { id, short_id, long_url } = result.rows[0];
     res.status(200).json({
