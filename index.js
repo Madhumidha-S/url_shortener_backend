@@ -9,3 +9,10 @@ app.use("/", routes);
 app.listen(PORT, () => {
   console.log(`Server running on port ${PORT}.`);
 });
+
+app.get('/', (req, res) => {
+  res.json({
+    message: 'MCQ Questions API', 
+    version: '1.0.0'
+  });
+});
