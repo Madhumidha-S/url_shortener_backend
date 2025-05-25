@@ -3,10 +3,10 @@ const urlRoutes = require("./urlRoutes");
 
 const router = express.Router();
 
-router.get("/api/health", (req, res) => {
+router.get("/health", (req, res) => {
   res.status(200).json({ status: "ok", timestamp: new Date().toISOString() });
 });
 
-router.use("/api", urlRoutes);
+router.use("/", urlRoutes);
 
 module.exports = router;

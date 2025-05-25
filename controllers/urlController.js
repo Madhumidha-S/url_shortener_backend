@@ -73,6 +73,7 @@ exports.deleteURL = async (req, res, next) => {
       return res.status(400).json({ error: "URL not found" });
     }
     logger.info(`Deleted Short ID: ${delete_id}`);
+    await db.query(`DELETE FROM analytics WHERE short_id = $1`, [delete_id]);
     await db.query(`DELETE FROM urls WHERE short_id = $1`, [delete_id]);
     const { id, short_id, long_url } = result.rows[0];
     res.status(200).json({
@@ -101,12 +102,12 @@ exports.getAnalytics = async (req, res, next) => {
       return res.status(404).json({ error: "Short URL not found" });
     }
 
-    const analyticsQuery = `SELECT * FROM analytics WHERE short_id = $1`;
+    const analyticsQuery = `SELECT * FROM analytics WHERE short_id = $1 ORDER BY timestamp DESC`;
     const { rows: analyticsData } = await db.query(analyticsQuery, [shortID]);
 
     res.json({
       url: urlResult.rows[0],
-      stats: analyticsData[0],
+      stats: analyticsData,
     });
     logger.info("URL analytics fetched successfully");
   } catch (error) {
