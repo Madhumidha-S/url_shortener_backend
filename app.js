@@ -2,7 +2,7 @@ const express = require("express");
 const cors = require("cors");
 const path = require("path");
 require("dotenv").config();
-const routes = require("./routes");
+const { errorHandler } = require("./middleware");
 const logger = require("./utils/logger");
 const db = require("./utils/database");
 
@@ -53,7 +53,11 @@ app.get("/:id", async (req, res) => {
     ]);
     return res.redirect(target_url);
   } catch (error) {
-    console.error("Redirect error:", error);
+    logger.error("Redirect error:", {
+      message: error.message,
+      stack: error.stack,
+      url: req.originalUrl,
+    });
     return res.status(500).send("Server error");
   }
 });
@@ -67,5 +71,7 @@ app.use((req, res) => {
     },
   });
 });
+
+app.use(errorHandler);
 
 module.exports = app;
