@@ -73,6 +73,7 @@ exports.deleteURL = async (req, res, next) => {
       return res.status(400).json({ error: "URL not found" });
     }
     logger.info(`Deleted Short ID: ${delete_id}`);
+    await db.query(`DELETE FROM analytics WHERE short_id = $1`, [delete_id]);
     await db.query(`DELETE FROM urls WHERE short_id = $1`, [delete_id]);
     const { id, short_id, long_url } = result.rows[0];
     res.status(200).json({
@@ -86,5 +87,43 @@ exports.deleteURL = async (req, res, next) => {
   } catch (error) {
     next(error);
     res.status(500).json({ error: "Failed to delete URL" });
+  }
+};
+
+exports.getAnalytics = async (req, res, next) => {
+  try {
+    const { shortID } = req.params;
+    const urlResult = await db.query(
+      `SELECT long_url FROM urls WHERE short_id = $1`,
+      [shortID]
+    );
+
+    if (urlResult.rows.length === 0) {
+      return res.status(404).json({ error: "Short URL not found" });
+    }
+
+    const analyticsQuery = `SELECT * FROM analytics WHERE short_id = $1 ORDER BY timestamp DESC`;
+    const { rows: analyticsData } = await db.query(analyticsQuery, [shortID]);
+
+    res.json({
+      url: urlResult.rows[0],
+      stats: analyticsData,
+    });
+    logger.info("URL analytics fetched successfully");
+  } catch (error) {
+    next(error);
+    res.status(500).json({ error: "Failed to fetch Analytics" });
+  }
+};
+
+exports.getHistory = async (req, res, next) => {
+  try {
+    const query = `SELECT * FROM urls ORDER BY created_at DESC`;
+    const { rows: data } = await db.query(query);
+    res.json(data);
+    logger.info("URL history fetched successfully");
+  } catch (error) {
+    next(error);
+    res.status(500).json({ error: "Failed to fetch URL history" });
   }
 };
