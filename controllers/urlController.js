@@ -16,25 +16,34 @@ exports.generateURL = async (req, res, next) => {
     return encoded || "0";
   }
 
-  // function decode(str) {
-  //   let decoded = 0;
-  //   for (let i = 0; i < str.length; i++) {
-  //     decoded = decoded * base + characters.indexOf(str[i]);
-  //   }
-  //   return decoded;
-  // }
+
 
   try {
-    const { longURL } = req.body;
+    let { longURL } = req.body;
     if (!longURL) {
       return res
         .status(400)
         .json({ error: "longURL is required in the request body" });
     }
-    const result = await db.query(`SELECT num_value FROM url_counter`);
-    let num = Number(result.rows[0]?.num_value);
 
-    num = num + 1;
+    if (!/^https?:\/\//i.test(longURL)) {
+      longURL = 'http://' + longURL;
+    }
+
+    let result = await db.query(
+      `UPDATE url_counter SET num_value = num_value + 1, updated_at = $1 RETURNING num_value`,
+      [new Date()]
+    );
+    
+    let num;
+    if (result.rows.length === 0) {
+      result = await db.query(
+        `INSERT INTO url_counter (num_value, updated_at) VALUES (1, $1) RETURNING num_value`,
+        [new Date()]
+      );
+    }
+    num = Number(result.rows[0].num_value);
+
     const shortID = encode(num);
     const shortenedURL = `${process.env.BASE_URL}/${shortID}`;
     logger.info(
@@ -45,11 +54,6 @@ exports.generateURL = async (req, res, next) => {
       [shortID, longURL, new Date()]
     );
 
-    await db.query(`UPDATE url_counter SET num_value = $1, updated_at = $2`, [
-      num,
-      new Date(),
-    ]);
-
     res.status(200).json({
       longURL,
       shortenedURL,
@@ -57,7 +61,6 @@ exports.generateURL = async (req, res, next) => {
     });
   } catch (error) {
     next(error);
-    res.status(500).json({ error: "Failed to generate Shortened URL" });
   }
 };
 
@@ -86,7 +89,6 @@ exports.deleteURL = async (req, res, next) => {
     });
   } catch (error) {
     next(error);
-    res.status(500).json({ error: "Failed to delete URL" });
   }
 };
 
@@ -102,7 +104,7 @@ exports.getAnalytics = async (req, res, next) => {
       return res.status(404).json({ error: "Short URL not found" });
     }
 
-    const analyticsQuery = `SELECT * FROM analytics WHERE short_id = $1 ORDER BY timestamp DESC`;
+    const analyticsQuery = `SELECT * FROM analytics WHERE short_id = $1 ORDER BY accessed_at DESC`;
     const { rows: analyticsData } = await db.query(analyticsQuery, [shortID]);
 
     res.json({
@@ -112,7 +114,6 @@ exports.getAnalytics = async (req, res, next) => {
     logger.info("URL analytics fetched successfully");
   } catch (error) {
     next(error);
-    res.status(500).json({ error: "Failed to fetch Analytics" });
   }
 };
 
@@ -124,6 +125,5 @@ exports.getHistory = async (req, res, next) => {
     logger.info("URL history fetched successfully");
   } catch (error) {
     next(error);
-    res.status(500).json({ error: "Failed to fetch URL history" });
   }
 };

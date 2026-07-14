@@ -8,6 +8,7 @@ const db = require("./utils/database");
 
 const urlRoutes = require("./routes/index");
 const app = express();
+app.set("trust proxy", true);
 app.use(cors());
 app.use(express.json());
 
@@ -43,14 +44,18 @@ app.get("/:id", async (req, res) => {
     const target_url = data[0].long_url;
     logger.info(`Redirecting ${shortID} to ${target_url}`);
 
-    const logQuery = `INSERT INTO analytics (short_id, timestamp, user_agent, ip_address) VALUES ($1, $2, $3, $4)`;
+    const logQuery = `INSERT INTO analytics (short_id, accessed_at, user_agent, ip_address) VALUES ($1, $2, $3, $4)`;
 
-    await db.query(logQuery, [
+    db.query(logQuery, [
       shortID,
       new Date(),
       req.headers["user-agent"],
       req.ip,
-    ]);
+    ]).catch(err => logger.error("Failed to insert analytics", { error: err.message }));
+
+    db.query(`UPDATE urls SET clicks = clicks + 1 WHERE short_id = $1`, [shortID])
+      .catch(err => logger.error("Failed to update clicks", { error: err.message }));
+
     return res.redirect(target_url);
   } catch (error) {
     logger.error("Redirect error:", {
@@ -61,17 +66,5 @@ app.get("/:id", async (req, res) => {
     return res.status(500).send("Server error");
   }
 });
-
-app.use((req, res) => {
-  res.status(404).json({
-    success: false,
-    error: {
-      code: "NOT_FOUND",
-      message: "The requested resource was not found",
-    },
-  });
-});
-
-app.use(errorHandler);
 
 module.exports = app;

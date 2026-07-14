@@ -1,18 +1,20 @@
 require("dotenv").config();
-const express = require("express");
 const app = require("./app");
-app.use(express.json());
+const { errorHandler } = require("./middleware");
 const PORT = process.env.PORT || 3000;
-const routes = require("./routes");
-app.use("/", routes);
+
+app.use((req, res) => {
+  res.status(404).json({
+    success: false,
+    error: {
+      code: "NOT_FOUND",
+      message: "The requested resource was not found",
+    },
+  });
+});
+
+app.use(errorHandler);
 
 app.listen(PORT, () => {
   console.log(`Server running on port ${PORT}.`);
-});
-
-app.get("/", (req, res) => {
-  res.json({
-    message: "URL Shortener API",
-    version: "1.0.0",
-  });
 });
